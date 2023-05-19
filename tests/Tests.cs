@@ -137,24 +137,24 @@ namespace TransactionalBlobStorage.Tests
         }
 
         [Fact]
-        public async Task GivenBlob_WhenDeleteUploadInTransaction_OriginalBlob()
+        public async Task GivenBlob_WhenDeleteUploadInFailedTransaction_OriginalBlob()
         {
             //Given
             var storage = GetBlobStorage();
             var (stream, initialBlobContent, uploadedBlobFullName) = GetRandomFile();
             await storage.Upload(uploadedBlobFullName, stream);
+            var (stream2, _, uploadedFileFullName2) = GetRandomFile();
 
             //When
             using (var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
             {
                 await storage.Delete(uploadedBlobFullName);
-
-                var (stream2, _, uploadedFileFullName2) = GetRandomFile();
                 await storage.Upload(uploadedFileFullName2, stream2);
             }
 
             //Then
             (await storage.Get(uploadedBlobFullName))!.ReadAllBytes().Should().BeEquivalentTo(initialBlobContent);
+            (await storage.Get(uploadedFileFullName2)).Should().BeNull();
         }
     }
 }
