@@ -38,6 +38,10 @@ namespace TransactionalBlobStorage
 
         public void Commit(Enlistment enlistment)
         {
+            foreach (var operation in executedOperations)
+            {
+                operation.ClearBackups();
+            }
             enlistment.Done();
         }
 

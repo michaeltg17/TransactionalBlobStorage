@@ -1,11 +1,12 @@
 ﻿using Azure.Storage.Blobs;
 using TransactionalBlobStorage.Net.Extensions;
 using TransactionalBlobStorage.Operations;
+using TransactionalBlobStorage.Operations.Base;
 using static TransactionalBlobStorage.Net.Helpers.TransactionHelper;
 
 namespace TransactionalBlobStorage
 {
-    public class BlobStorage : IObjectStorage
+    public class BlobStorage
     {
         readonly string connectionString;
         readonly string containerName;
@@ -32,6 +33,15 @@ namespace TransactionalBlobStorage
             }
 
             return operation.Execute();
+        }
+
+        public Task<bool> HasTransactionalBackupBlobs()
+        {
+            var containerClient = new BlobContainerClient(connectionString, containerName);
+            return containerClient
+                .GetBlobsAsync(prefix: TransactionalBlobOperation.BackupPrefix)
+                .AnyAsync()
+                .AsTask();
         }
 
         public async Task<Stream?> Get(string fullFileName)

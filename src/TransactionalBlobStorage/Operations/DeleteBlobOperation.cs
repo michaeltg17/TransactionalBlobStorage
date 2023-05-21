@@ -39,6 +39,13 @@ namespace TransactionalBlobStorage.Operations
             var subjectBlobClient = containerClient.GetBlobClient(fullFileName);
             var tempBlobClient = containerClient.GetBlobClient(tempFileFullName);
             await subjectBlobClient.SyncCopyFromUriAsync(tempBlobClient.Uri);
+            await ClearBackups();
+        }
+
+        public override async Task ClearBackups()
+        {
+            var tempBlobClient = containerClient.GetBlobClient(tempFileFullName);
+            await tempBlobClient.DeleteAsync();
         }
     }
 }

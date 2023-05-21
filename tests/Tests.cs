@@ -6,9 +6,9 @@ using TransactionalBlobStorage.Net.Extensions;
 
 namespace TransactionalBlobStorage.Tests
 {
-    public class Tests
+    public class BlobStorageTests
     {
-        static IObjectStorage GetBlobStorage()
+        static BlobStorage GetBlobStorage()
         {
             return new BlobStorage(
                 Settings.AzureStorageAccountConnectionString,
@@ -21,7 +21,7 @@ namespace TransactionalBlobStorage.Tests
             var content = new byte[1024];
             Random.Shared.NextBytes(content);
             var stream = new MemoryStream(content);
-            var fullFileName = $"{nameof(Tests)}_{Guid.NewGuid()}.txt";
+            var fullFileName = $"{nameof(BlobStorageTests)}_{Guid.NewGuid()}.txt";
 
             return (stream, content, fullFileName);
         }
@@ -39,6 +39,7 @@ namespace TransactionalBlobStorage.Tests
             //Then
             var downloadedFile = await storage.GetOrThrow(uploadedFileFullName);
             downloadedFile.ReadAllBytes().Should().BeEquivalentTo(uploadedFile);
+            await ValidateNoTransactionalBackupBlobsLeft();
 
             //Clear
             await storage.Delete(uploadedFileFullName);
@@ -61,6 +62,7 @@ namespace TransactionalBlobStorage.Tests
             //Then
             var downloadedFile = await storage.GetOrThrow(uploadedFileFullName);
             downloadedFile.ReadAllBytes().Should().BeEquivalentTo(uploadedFile);
+            await ValidateNoTransactionalBackupBlobsLeft();
 
             //Clear
             await storage.Delete(uploadedFileFullName);
@@ -82,6 +84,7 @@ namespace TransactionalBlobStorage.Tests
             //Then
             var getUploadedFile = () => storage.GetOrThrow(uploadedFileFullName);
             (await getUploadedFile.Should().ThrowAsync<RequestFailedException>()).Which.ErrorCode.Should().Be("BlobNotFound");
+            await ValidateNoTransactionalBackupBlobsLeft();
         }
 
         [Fact]
@@ -97,6 +100,7 @@ namespace TransactionalBlobStorage.Tests
 
             //Then
             (await storage.Get(uploadedFileFullName)).Should().BeNull();
+            await ValidateNoTransactionalBackupBlobsLeft();
         }
 
         [Fact]
@@ -116,6 +120,10 @@ namespace TransactionalBlobStorage.Tests
 
             //Then
             (await storage.Get(uploadedFileFullName)).Should().BeNull();
+            await ValidateNoTransactionalBackupBlobsLeft();
+
+            //Clear
+
         }
 
         [Fact]
@@ -134,6 +142,10 @@ namespace TransactionalBlobStorage.Tests
 
             //Then
             (await storage.Get(uploadedFileFullName))!.ReadAllBytes().Should().BeEquivalentTo(uploadedFile);
+            await ValidateNoTransactionalBackupBlobsLeft();
+
+            //Clear
+            await storage.Delete(uploadedFileFullName);
         }
 
         [Fact]
@@ -143,18 +155,28 @@ namespace TransactionalBlobStorage.Tests
             var storage = GetBlobStorage();
             var (stream, initialBlobContent, uploadedBlobFullName) = GetRandomFile();
             await storage.Upload(uploadedBlobFullName, stream);
-            var (stream2, _, uploadedFileFullName2) = GetRandomFile();
+            var (stream2, _, uploadedBlobFullName2) = GetRandomFile();
 
             //When
             using (var transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
             {
                 await storage.Delete(uploadedBlobFullName);
-                await storage.Upload(uploadedFileFullName2, stream2);
+                await storage.Upload(uploadedBlobFullName2, stream2);
             }
 
             //Then
             (await storage.Get(uploadedBlobFullName))!.ReadAllBytes().Should().BeEquivalentTo(initialBlobContent);
-            (await storage.Get(uploadedFileFullName2)).Should().BeNull();
+            (await storage.Get(uploadedBlobFullName2)).Should().BeNull();
+            await ValidateNoTransactionalBackupBlobsLeft();
+
+            //Clear
+            await storage.Delete(uploadedBlobFullName);
+        }
+
+        static async Task ValidateNoTransactionalBackupBlobsLeft()
+        {
+            var storage = GetBlobStorage();
+            (await storage.HasTransactionalBackupBlobs()).Should().BeFalse();
         }
     }
 }
