@@ -121,9 +121,6 @@ namespace TransactionalBlobStorage.Tests
             //Then
             (await storage.Get(uploadedFileFullName)).Should().BeNull();
             await ValidateNoTransactionalBackupBlobsLeft();
-
-            //Clear
-
         }
 
         [Fact]
