@@ -3,6 +3,8 @@ using Xunit;
 using System.Transactions;
 using Azure;
 using TransactionalBlobStorage.Net.Extensions;
+using Azure.Storage.Blobs;
+using Azure.Identity;
 
 namespace TransactionalBlobStorage.Tests
 {
@@ -10,10 +12,14 @@ namespace TransactionalBlobStorage.Tests
     {
         static BlobStorage GetBlobStorage()
         {
-            return new BlobStorage(
-                Settings.AzureStorageAccountConnectionString,
-                "tests",
-                new BlobStorageResourceManager());
+            var blobContainerClient = new BlobServiceClient(
+                new Uri("https://michaelmagicstorage.blob.core.windows.net/"),
+                new DefaultAzureCredential(new DefaultAzureCredentialOptions()
+                {
+                    TenantId = "3d757f7b-f6ad-4565-94ff-d0ea9fc92dca"
+                }));
+
+            return new BlobStorage(blobContainerClient, new BlobStorageResourceManager());
         }
 
         static (Stream stream, byte[] content, string fullFileName) GetRandomFile()

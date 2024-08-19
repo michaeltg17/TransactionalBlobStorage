@@ -1,31 +1,15 @@
 ﻿using Azure.Storage.Blobs;
-using TransactionalBlobStorage.Net.Extensions;
 using TransactionalBlobStorage.Operations;
 using TransactionalBlobStorage.Operations.Base;
 using static TransactionalBlobStorage.Net.Helpers.TransactionHelper;
 
 namespace TransactionalBlobStorage
 {
-    public class BlobStorage
+    public class BlobStorage(BlobContainerClient containerClient, IBlobStorageResourceManager blobStorageResourceManager)
     {
-        readonly string connectionString;
-        readonly string containerName;
-        readonly IBlobStorageResourceManager blobStorageResourceManager;
-
-        public BlobStorage(
-            string connectionString,
-            string containerName,
-            IBlobStorageResourceManager blobStorageResourceManager)
-        {
-            this.connectionString = connectionString.ThrowIfNull();
-            this.containerName = containerName.ThrowIfNull();
-            this.blobStorageResourceManager = blobStorageResourceManager.ThrowIfNull();
-        }
-
         public Task Delete(string fullFileName)
         {
-            var container = new BlobContainerClient(connectionString, containerName);
-            var operation = new DeleteBlobOperation(container, fullFileName);
+            var operation = new DeleteBlobOperation(containerClient, fullFileName);
 
             if (IsInTransaction())
             {
@@ -37,7 +21,6 @@ namespace TransactionalBlobStorage
 
         public Task<bool> HasTransactionalBackupBlobs()
         {
-            var containerClient = new BlobContainerClient(connectionString, containerName);
             return containerClient
                 .GetBlobsAsync(prefix: TransactionalBlobOperation.BackupPrefix)
                 .AnyAsync()
@@ -46,7 +29,6 @@ namespace TransactionalBlobStorage
 
         public async Task<Stream?> Get(string fullFileName)
         {
-            var containerClient = new BlobContainerClient(connectionString, containerName);
             var blobClient = containerClient.GetBlobClient(fullFileName);
 
             return await blobClient.ExistsAsync()
@@ -56,7 +38,6 @@ namespace TransactionalBlobStorage
 
         public Task<Stream> GetOrThrow(string fullFileName)
         {
-            var containerClient = new BlobContainerClient(connectionString, containerName);
             var blobClient = containerClient.GetBlobClient(fullFileName);
 
             return blobClient.OpenReadAsync();
@@ -64,8 +45,7 @@ namespace TransactionalBlobStorage
 
         public async Task<string> Upload(string fullFileName, Stream stream)
         {
-            var container = new BlobContainerClient(connectionString, containerName);
-            var operation = new UploadBlobOperation(container, fullFileName, stream);
+            var operation = new UploadBlobOperation(containerClient, fullFileName, stream);
 
             if (IsInTransaction())
             {
