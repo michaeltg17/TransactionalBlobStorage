@@ -4,19 +4,13 @@ using TransactionalBlobStorage.Operations.Base;
 
 namespace TransactionalBlobStorage.Operations
 {
-    public class DeleteBlobOperation : BlobOperation
+    public class DeleteBlobOperation(
+        BlobContainerClient containerClient,
+        string fullFileName) : BlobOperation
     {
-        readonly BlobContainerClient containerClient;
-        readonly string fullFileName;
+        readonly BlobContainerClient containerClient = containerClient.ThrowIfNull();
+        readonly string fullFileName = fullFileName.ThrowIfNullEmptyOrWhiteSpace();
         string tempFileFullName;
-
-        public DeleteBlobOperation(
-            BlobContainerClient containerClient,
-            string fullFileName)
-        {
-            this.containerClient = containerClient.ThrowIfNull();
-            this.fullFileName = fullFileName.ThrowIfNullEmptyOrWhiteSpace();
-        }
 
         public override Task Execute()
         {

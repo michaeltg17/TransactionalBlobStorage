@@ -12,12 +12,14 @@ namespace TransactionalBlobStorage.Tests
     {
         static BlobStorage GetBlobStorage()
         {
-            var blobContainerClient = new BlobServiceClient(
+            var blobContainerService = new BlobServiceClient(
                 new Uri("https://michaelmagicstorage.blob.core.windows.net/"),
                 new DefaultAzureCredential(new DefaultAzureCredentialOptions()
                 {
                     TenantId = "3d757f7b-f6ad-4565-94ff-d0ea9fc92dca"
                 }));
+
+            var blobContainerClient = blobContainerService.GetBlobContainerClient("tests");
 
             return new BlobStorage(blobContainerClient, new BlobStorageResourceManager());
         }
